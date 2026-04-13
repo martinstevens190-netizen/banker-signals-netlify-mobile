@@ -1,0 +1,23 @@
+{
+  "name": "banker-signals-netlify",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "netlify dev",
+    "start": "netlify dev",
+    "lint:syntax": "node --check netlify/functions/api.js && node --check netlify/functions/schedule-runner.js && node --check public/app.js"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^9.0.3",
+    "@netlify/functions": "^4.2.0",
+    "luxon": "^3.5.0",
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "netlify-cli": "^23.2.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
