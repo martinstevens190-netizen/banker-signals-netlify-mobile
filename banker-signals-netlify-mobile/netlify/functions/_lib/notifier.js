@@ -26,11 +26,11 @@ export async function subscribe(subscription) {
   return { ok: true };
 }
 
-export async function sendPushToAll({ title, body, url = '/#alerts' }) {
+export async function sendPushToAll({ title, body, url = '/#alerts', alertId = '' }) {
   if (!pushReady) {
     return { sent: 0, skipped: true, reason: 'VAPID keys missing' };
   }
-  const payload = JSON.stringify({ title, body, url });
+  const payload = JSON.stringify({ title, body, url, alertId });
   const subs = await pushRepo.all();
   let sent = 0;
   for (const row of subs) {

@@ -184,9 +184,10 @@ export default async (req) => {
       promptBody: payload?.promptBody || 'Generate banker-first preview',
       settings,
     });
-    const saved = { id: id(), title: output.title, payload: output, created_at: nowIso(), source: 'manual-sample' };
+    const saved = { id: id(), title: output.title, payload: { ...output, alertId: id() }, created_at: nowIso(), source: 'manual-sample' };
+    saved.payload.alertId = saved.id;
     await alertRepo.insert(saved);
-    await runRepo.insert({ id: id(), run_name: output.promptName, status: 'Completed', summary: 'Manual sample alert generated.', created_at: nowIso() });
+    await runRepo.insert({ id: id(), run_name: output.promptName, status: 'Completed', summary: 'Manual banker alert generated.', created_at: nowIso() });
     return json(saved, 201);
   }
 
@@ -196,7 +197,31 @@ export default async (req) => {
   }
 
   if (req.method === 'POST' && resource === 'notifications' && resourceId === 'test') {
-    return json(await sendPushToAll({ title: '✅ Cleanest Top Banker Legs', body: 'Your banker games notification is ready.', url: '/#alerts' }));
+    const createdAt = nowIso();
+    const testAlert = {
+      id: id(),
+      title: '✅ Test banker alert',
+      payload: {
+        alertId: id(),
+        title: '✅ Test banker alert',
+        createdAt,
+        promptName: 'Push notification test',
+        banker: ['Test banker game card ready. Replace this by running a real banker scan.'],
+        setA: [],
+        setB: [],
+        passList: [],
+        summary: 'Push test alert created.',
+        notificationTitle: '✅ Test banker alert',
+        notificationBody: 'Tap to open the exact banker alert card.',
+      },
+      created_at: createdAt,
+      source: 'push-test',
+    };
+    testAlert.payload.alertId = testAlert.id;
+    await alertRepo.insert(testAlert);
+    const url = `/?alert=${testAlert.id}#alerts`;
+    const push = await sendPushToAll({ title: testAlert.payload.notificationTitle, body: testAlert.payload.notificationBody, url, alertId: testAlert.id });
+    return json({ ok: true, url, alertId: testAlert.id, push });
   }
 
   return json({ error: 'Not found' }, 404);
