@@ -1,117 +1,74 @@
+const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => [...document.querySelectorAll(selector)];
+
+const state = {
+  config: null,
+  settings: null,
+  prompts: [],
+  alerts: [],
+};
 
 let vapidPublicKey = '';
 let pushConfigured = false;
-let currentSettings = null;
-
-const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => [...document.querySelectorAll(sel)];
+let permissionState = 'default';
 
 const promptList = $('#promptList');
 const latestAlert = $('#latestAlert');
 const alertBoard = $('#alertBoard');
 
+function escapeHtml(value = '') {
+  return String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+}
+
 async function api(path, options = {}) {
-  const res = await fetch(path, {
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+  const response = await fetch(path, {
+    headers: { 'content-type': 'application/json', ...(options.headers || {}) },
     ...options,
   });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || 'Request failed');
+  return data;
 }
 
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const raw = atob(base64);
-  return Uint8Array.from([...raw].map((char) => char.charCodeAt(0)));
+function displayTime(hhmm = '21:00') {
+  const [hours, minutes] = String(hhmm).split(':').map(Number);
+  const dt = new Date();
+  dt.setHours(hours || 21, minutes || 0, 0, 0);
+  return dt.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' });
 }
 
-function escapeHtml(str = '') {
-  return String(str).replace(/[&<>"']/g, (ch) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
+function formatDays(value = 'daily') {
+  return value === 'weekdays' ? 'Weekdays' : value === 'weekends' ? 'Weekends' : 'Daily';
 }
 
-function formatDays(days) {
-  return days === 'daily' ? 'Daily' : days === 'weekdays' ? 'Weekdays' : days === 'weekends' ? 'Weekends' : days;
+function badge(text, tone = 'soft') {
+  return `<span class="badge ${tone}">${escapeHtml(text)}</span>`;
 }
 
 function switchTab(tab) {
-  $$('.nav-btn').forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === tab));
   $$('.screen').forEach((screen) => screen.classList.toggle('active', screen.id === `screen-${tab}`));
-}
-
-function badge(label, cls) {
-  return `<span class="badge ${cls}">${escapeHtml(label)}</span>`;
+  $$('.nav-btn').forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === tab));
+  window.scrollTo({ top: 0, behavior: 'auto' });
 }
 
 function updatePushStatus() {
-  if (!('Notification' in window)) {
-    $('#pushStatus').textContent = 'Unsupported';
-    $('#notificationLabel').textContent = 'Unsupported';
-    return;
-  }
-  let status = Notification.permission === 'granted'
-    ? 'Enabled'
-    : Notification.permission === 'denied'
+  permissionState = window.Notification ? Notification.permission : 'unsupported';
+  const label = permissionState === 'granted'
+    ? 'On'
+    : permissionState === 'denied'
       ? 'Blocked'
-      : 'Not enabled';
-
-  if (Notification.permission === 'granted' && !pushConfigured) {
-    status = 'Local only';
-  }
-
-  $('#pushStatus').textContent = status;
-  $('#notificationLabel').textContent = status;
-
-  const serverNote = $('#pushServerNote');
-  if (serverNote) {
-    if (pushConfigured) {
-      serverNote.textContent = 'Phone push server is connected.';
-    } else {
-      serverNote.textContent = 'Phone push server is not connected yet. Preview and local test alerts will still work.';
-    }
-  }
-
-  const pushButtons = ['#testPushBtn', '#testPushBtnTwo'];
-  pushButtons.forEach((sel) => {
-    const btn = $(sel);
-    if (!btn) return;
-    btn.disabled = !pushConfigured;
-    btn.classList.toggle('disabled-btn', !pushConfigured);
-    btn.title = pushConfigured ? 'Send a real push notification test.' : 'Server push is not connected yet.';
-  });
-}
-
-async function showLocalNotification(title, body) {
-  if (!('Notification' in window)) {
-    throw new Error('Notifications are not supported on this device/browser.');
-  }
-  if (Notification.permission !== 'granted') {
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      throw new Error('Notification permission is still not enabled.');
-    }
-  }
-
-  if ('serviceWorker' in navigator) {
-    const registration = await navigator.serviceWorker.ready;
-    await registration.showNotification(title, {
-      body,
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
-      data: { url: '/' }
-    });
-    return;
-  }
-
-  new Notification(title, { body, icon: '/icons/icon-192.png' });
-}
-
-function showInfo(message) {
-  window.alert(message);
+      : permissionState === 'unsupported'
+        ? 'Unsupported'
+        : 'Off';
+  $('#pushStatus').textContent = label;
+  $('#notificationLabel').textContent = label === 'On' ? 'Enabled' : label;
+  $('#pushServerNote').textContent = pushConfigured
+    ? 'Push server is connected.'
+    : 'Push server still needs your Netlify keys.';
 }
 
 function fillSettings(settings) {
-  currentSettings = settings;
+  state.settings = settings;
   $('#defaultScanTime').value = settings.default_scan_time || '21:00';
   $('#defaultDays').value = settings.default_days || 'daily';
   $('#bulkScheduleTime').value = settings.default_scan_time || '21:00';
@@ -122,81 +79,70 @@ function fillSettings(settings) {
   $('#sotUpper').value = settings.bands?.shots_on_target?.upper || '';
   $('#sotLower').value = settings.bands?.shots_on_target?.lower || '';
   $('#sotRecommended').value = settings.bands?.shots_on_target?.recommended || '';
-  $('#nextScanLabel').textContent = `${displayTime(settings.default_scan_time || '21:00')} • ${formatDays(settings.default_days || 'daily')}`;
-}
-
-function displayTime(hhmm = '21:00') {
-  const [h, m] = hhmm.split(':').map(Number);
-  const d = new Date();
-  d.setHours(h, m, 0, 0);
-  return d.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' });
+  $('#nextScanLabel').textContent = `${displayTime(settings.default_scan_time || '21:00')}`;
 }
 
 function renderPrompts(prompts) {
+  state.prompts = prompts;
   $('#promptCount').textContent = prompts.length;
-  $('#bankerCount').textContent = prompts.filter((p) => p.banker_focus).length;
-  $('#scheduleCount').textContent = prompts.reduce((sum, p) => sum + Number(p.schedule_count || 0), 0);
+  $('#bankerCount').textContent = prompts.filter((item) => item.banker_focus).length;
 
   if (!prompts.length) {
-    promptList.innerHTML = `<div class="alert-card">No prompts added yet.</div>`;
+    promptList.innerHTML = '<div class="alert-card empty">No prompts added yet.</div>';
     return;
   }
 
   promptList.innerHTML = prompts.map((prompt) => `
     <article class="prompt-card">
-      <div class="prompt-top">
-        <div>
-          <h3 class="prompt-title">${escapeHtml(prompt.name)}</h3>
-          <p class="subtle">${escapeHtml(prompt.body)}</p>
-        </div>
-      </div>
+      <h3 class="prompt-title">${escapeHtml(prompt.name)}</h3>
+      <p class="subtle">${escapeHtml(prompt.body)}</p>
       <div class="badge-row">
         ${badge(prompt.category || 'Custom', 'green')}
+        ${badge(prompt.banker_focus ? 'Banker alert on' : 'Banker alert off', prompt.banker_focus ? 'pink' : 'soft')}
+        ${badge(`${prompt.schedule_count || 0} schedules`, 'blue')}
         ${prompt.priority ? badge('Priority', 'gold') : ''}
-        ${prompt.banker_focus ? badge('Banker alert on', 'pink') : badge('Banker alert off', 'soft')}
-        ${badge(`${prompt.schedule_count} schedules`, 'blue')}
       </div>
       <div class="prompt-actions">
-        <button class="switch-btn ${prompt.banker_focus ? 'on' : ''}" data-toggle-banker="${prompt.id}" data-priority="${prompt.priority ? 1 : 0}" data-banker="${prompt.banker_focus ? 1 : 0}">${prompt.banker_focus ? 'Banker alert on' : 'Turn banker on'}</button>
-        <button class="mini-btn" data-toggle-priority="${prompt.id}" data-priority="${prompt.priority ? 1 : 0}" data-banker="${prompt.banker_focus ? 1 : 0}">${prompt.priority ? 'Remove priority' : 'Make priority'}</button>
-        <button class="mini-btn" data-add-default="${prompt.id}">Use default time</button>
-        <button class="mini-btn" data-delete-prompt="${prompt.id}">Delete</button>
+        <button class="switch-btn ${prompt.banker_focus ? 'on' : ''}" data-action="banker" data-id="${prompt.id}" data-priority="${prompt.priority ? 1 : 0}" data-banker="${prompt.banker_focus ? 1 : 0}">${prompt.banker_focus ? 'Banker on' : 'Turn banker on'}</button>
+        <button class="mini-btn" data-action="priority" data-id="${prompt.id}" data-priority="${prompt.priority ? 1 : 0}" data-banker="${prompt.banker_focus ? 1 : 0}">${prompt.priority ? 'Remove priority' : 'Make priority'}</button>
+        <button class="mini-btn" data-action="schedule" data-id="${prompt.id}">Use default time</button>
+        <button class="mini-btn" data-action="delete" data-id="${prompt.id}">Delete</button>
       </div>
     </article>
   `).join('');
 }
 
-function renderLatestAlert(alerts) {
+function renderAlerts(alerts) {
+  state.alerts = alerts;
   if (!alerts.length) {
-    latestAlert.className = 'alert-preview empty';
+    latestAlert.className = 'latest-alert empty';
     latestAlert.textContent = 'No banker alert yet.';
     $('#latestPromptLabel').textContent = 'Waiting';
-    alertBoard.innerHTML = '<div class="alert-card">Run a preview to see your banker notification layout.</div>';
+    alertBoard.innerHTML = '<div class="alert-card empty">Create an alert to see banker games here.</div>';
     return;
   }
 
-  const latest = alerts[0].payload || {};
-  const bankerItems = latest.banker || [];
+  const latest = alerts[0]?.payload || {};
+  const banker = latest.banker || [];
   const bands = latest.bands || {};
-  $('#latestPromptLabel').textContent = latest.promptName || 'Manual banker scan';
-
-  latestAlert.className = 'alert-preview';
+  $('#latestPromptLabel').textContent = latest.promptName || 'Latest banker run';
+  latestAlert.className = 'latest-alert';
   latestAlert.innerHTML = `
     <article class="alert-card dark">
       <h3>${escapeHtml(latest.title || '✅ Banker games ready')}</h3>
-      <p class="subtle">${new Date(latest.createdAt).toLocaleString('en-AU', { timeZone: 'Australia/Melbourne' })}</p>
-      <ul>${bankerItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+      <p class="subtle">${new Date(latest.createdAt || Date.now()).toLocaleString('en-AU', { timeZone: 'Australia/Melbourne' })}</p>
+      <ul>${banker.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
     </article>
   `;
 
   alertBoard.innerHTML = `
     <article class="alert-card dark">
-      <h3>✅ Cleanest banker games section</h3>
-      <p class="subtle">Prompt: ${escapeHtml(latest.promptName || 'Manual banker scan')}</p>
-      <ul>${bankerItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+      <h3>✅ Cleanest banker games</h3>
+      <p class="subtle">${escapeHtml(latest.promptName || 'Latest banker run')}</p>
+      <ul>${banker.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
     </article>
     <article class="alert-card">
-      <h3>Total shots bands</h3>
+      <h3>Total shots</h3>
       <div class="shot-band-list">
         <div class="shot-line"><span>Upper band total shots</span><strong>${escapeHtml(bands.shots_total?.upper || '-')}</strong></div>
         <div class="shot-line"><span>Lower band total shots</span><strong>${escapeHtml(bands.shots_total?.lower || '-')}</strong></div>
@@ -204,7 +150,7 @@ function renderLatestAlert(alerts) {
       </div>
     </article>
     <article class="alert-card">
-      <h3>Total shots on target bands</h3>
+      <h3>Total shots on target</h3>
       <div class="shot-band-list">
         <div class="shot-line"><span>Upper band total shots on target</span><strong>${escapeHtml(bands.shots_on_target?.upper || '-')}</strong></div>
         <div class="shot-line"><span>Lower band total shots on target</span><strong>${escapeHtml(bands.shots_on_target?.lower || '-')}</strong></div>
@@ -215,26 +161,34 @@ function renderLatestAlert(alerts) {
 }
 
 async function refresh() {
-  const [config, prompts, alerts, settings] = await Promise.all([
+  const [config, settings, prompts, alerts] = await Promise.all([
     api('/api/config'),
+    api('/api/settings'),
     api('/api/prompts'),
     api('/api/alerts'),
-    api('/api/settings')
   ]);
+  state.config = config;
   vapidPublicKey = config.vapidPublicKey || '';
   pushConfigured = Boolean(config.pushConfigured);
   fillSettings(settings);
   renderPrompts(prompts);
-  renderLatestAlert(alerts);
+  renderAlerts(alerts);
   updatePushStatus();
 }
 
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+}
+
 async function ensurePushSubscription() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+  if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
     throw new Error('Push notifications are not supported on this device/browser.');
   }
   if (!vapidPublicKey) {
-    throw new Error('Push notification key is missing on the server.');
+    throw new Error('Push key is missing on the server.');
   }
   const registration = await navigator.serviceWorker.ready;
   let subscription = await registration.pushManager.getSubscription();
@@ -248,47 +202,112 @@ async function ensurePushSubscription() {
     method: 'POST',
     body: JSON.stringify(subscription),
   });
-  return subscription;
 }
 
-$$('.nav-btn').forEach((btn) => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+async function enableNotifications() {
+  if (!('Notification' in window)) {
+    alert('Notifications are not supported on this device.');
+    return;
+  }
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') {
+    updatePushStatus();
+    return;
+  }
+  try {
+    await ensurePushSubscription();
+    updatePushStatus();
+    alert('Notifications are enabled.');
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+function installZoomBlockers() {
+  document.addEventListener('gesturestart', (event) => event.preventDefault(), { passive: false });
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', (event) => {
+    const tag = event.target?.tagName;
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) event.preventDefault();
+    lastTouchEnd = now;
+  }, { passive: false });
+  document.addEventListener('dblclick', (event) => event.preventDefault(), { passive: false });
+}
 
 $('#settingsForm').addEventListener('submit', async (event) => {
   event.preventDefault();
-  const fd = new FormData(event.currentTarget);
+  const form = new FormData(event.currentTarget);
   await api('/api/settings', {
     method: 'PATCH',
     body: JSON.stringify({
-      defaultScanTime: fd.get('defaultScanTime'),
-      defaultDays: fd.get('defaultDays'),
+      defaultScanTime: form.get('defaultScanTime'),
+      defaultDays: form.get('defaultDays'),
     }),
   });
   await refresh();
   switchTab('home');
 });
 
+$('#applyToBankerBtn').addEventListener('click', async () => {
+  await api('/api/schedules/apply-banker', {
+    method: 'POST',
+    body: JSON.stringify({
+      time: $('#defaultScanTime').value,
+      days: $('#defaultDays').value,
+      notify: true,
+    }),
+  });
+  alert('Default time applied to banker prompts.');
+  await refresh();
+});
+
+$('#bulkForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  await api('/api/prompts/bulk', {
+    method: 'POST',
+    body: JSON.stringify({
+      text: form.get('text'),
+      category: form.get('category'),
+      priority: form.get('priority') === 'on',
+      bankerFocus: form.get('bankerFocus') === 'on',
+      autoSchedule: form.get('autoSchedule') === 'on',
+      scheduleTime: form.get('scheduleTime'),
+      days: form.get('days'),
+      notify: form.get('notify') === 'on',
+    }),
+  });
+  event.currentTarget.reset();
+  $('#bulkScheduleTime').value = state.settings?.default_scan_time || '21:00';
+  $('#bulkDays').value = state.settings?.default_days || 'daily';
+  await refresh();
+  switchTab('prompts');
+});
+
 $('#bandsForm').addEventListener('submit', async (event) => {
   event.preventDefault();
-  const fd = new FormData(event.currentTarget);
+  const form = new FormData(event.currentTarget);
   await api('/api/settings', {
     method: 'PATCH',
     body: JSON.stringify({
       bands: {
         shots_total: {
-          upper: fd.get('shotsUpper'),
-          lower: fd.get('shotsLower'),
-          recommended: fd.get('shotsRecommended'),
+          upper: form.get('shotsUpper'),
+          lower: form.get('shotsLower'),
+          recommended: form.get('shotsRecommended'),
         },
         shots_on_target: {
-          upper: fd.get('sotUpper'),
-          lower: fd.get('sotLower'),
-          recommended: fd.get('sotRecommended'),
+          upper: form.get('sotUpper'),
+          lower: form.get('sotLower'),
+          recommended: form.get('sotRecommended'),
         },
       },
     }),
   });
   await refresh();
-  switchTab('shots');
+  switchTab('alerts');
 });
 
 $('#fillBandsBtn').addEventListener('click', () => {
@@ -300,160 +319,84 @@ $('#fillBandsBtn').addEventListener('click', () => {
   $('#sotRecommended').value = '8+';
 });
 
-$('#bulkForm').addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const fd = new FormData(event.currentTarget);
-  await api('/api/prompts/bulk', {
+$('#generateSampleBtn').addEventListener('click', async () => {
+  const bankerPrompt = state.prompts.find((item) => item.banker_focus) || state.prompts[0];
+  await api('/api/alerts/generate-sample', {
     method: 'POST',
     body: JSON.stringify({
-      text: fd.get('text'),
-      category: fd.get('category'),
-      priority: fd.get('priority') === 'on',
-      bankerFocus: fd.get('bankerFocus') === 'on',
-      autoSchedule: fd.get('autoSchedule') === 'on',
-      scheduleTime: fd.get('scheduleTime'),
-      days: fd.get('days'),
-      notify: fd.get('notify') === 'on',
+      promptName: bankerPrompt?.name || 'Manual banker scan',
+      promptBody: bankerPrompt?.body || 'Generate banker games',
     }),
-  });
-  event.currentTarget.reset();
-  $('#bulkScheduleTime').value = currentSettings?.default_scan_time || '21:00';
-  $('#bulkDays').value = currentSettings?.default_days || 'daily';
-  await refresh();
-  switchTab('prompts');
-});
-
-promptList.addEventListener('click', async (event) => {
-  const bankerBtn = event.target.closest('[data-toggle-banker]');
-  if (bankerBtn) {
-    const priority = bankerBtn.dataset.priority === '1';
-    const bankerFocus = bankerBtn.dataset.banker === '1' ? false : true;
-    await api(`/api/prompts/${bankerBtn.dataset.toggleBanker}/flags`, {
-      method: 'PATCH',
-      body: JSON.stringify({ priority, bankerFocus }),
-    });
-    await refresh();
-    return;
-  }
-
-  const priorityBtn = event.target.closest('[data-toggle-priority]');
-  if (priorityBtn) {
-    const priority = priorityBtn.dataset.priority === '1' ? false : true;
-    const bankerFocus = priorityBtn.dataset.banker === '1';
-    await api(`/api/prompts/${priorityBtn.dataset.togglePriority}/flags`, {
-      method: 'PATCH',
-      body: JSON.stringify({ priority, bankerFocus }),
-    });
-    await refresh();
-    return;
-  }
-
-  const addBtn = event.target.closest('[data-add-default]');
-  if (addBtn) {
-    await api('/api/schedules', {
-      method: 'POST',
-      body: JSON.stringify({
-        promptId: addBtn.dataset.addDefault,
-        time: currentSettings?.default_scan_time || '21:00',
-        days: currentSettings?.default_days || 'daily',
-        notify: true,
-      }),
-    });
-    await refresh();
-    return;
-  }
-
-  const delBtn = event.target.closest('[data-delete-prompt]');
-  if (delBtn) {
-    await api(`/api/prompts/${delBtn.dataset.deletePrompt}`, { method: 'DELETE' });
-    await refresh();
-  }
-});
-
-$('#applyToBankerBtn').addEventListener('click', async () => {
-  await api('/api/schedules/apply-banker', {
-    method: 'POST',
-    body: JSON.stringify({
-      time: $('#defaultScanTime').value || '21:00',
-      days: $('#defaultDays').value || 'daily',
-      notify: true,
-    }),
-  });
-  await refresh();
-});
-
-async function generatePreview() {
-  const output = await api('/api/alerts/generate-sample', {
-    method: 'POST',
-    body: JSON.stringify({ promptName: 'Manual banker scan', promptBody: 'Preview banker alert' }),
   });
   await refresh();
   switchTab('alerts');
-  return output;
-}
+});
 
-$('#generateSampleBtn').addEventListener('click', generatePreview);
-$('#previewAlertBtn').addEventListener('click', generatePreview);
-
-async function requestNotificationPermission() {
-  if (!('Notification' in window)) {
-    showInfo('Notifications are not supported on this device/browser.');
-    return;
-  }
-
-  const permission = await Notification.requestPermission();
-  if (permission !== 'granted') {
-    updatePushStatus();
-    showInfo('Notification permission is not enabled yet.');
-    return;
-  }
-
-  try {
-    if (pushConfigured) {
-      await ensurePushSubscription();
-      showInfo('Notifications enabled.');
-    } else {
-      showInfo('Notifications are enabled on this device. Server push is not connected yet, so use Preview banker alert for now.');
-    }
-  } catch (error) {
-    showInfo(error.message);
-  } finally {
-    updatePushStatus();
-  }
-}
-
-$('#enablePushBtn').addEventListener('click', requestNotificationPermission);
-
+$('#enablePushBtn').addEventListener('click', enableNotifications);
 $('#testPushBtn').addEventListener('click', async () => {
   try {
-    await showLocalNotification('✅ Cleanest Top Banker Legs', 'This is a local test alert from your app.');
-    showInfo('Local test alert sent.');
-    updatePushStatus();
+    if (Notification.permission !== 'granted') await enableNotifications();
+    await api('/api/notifications/test', { method: 'POST', body: JSON.stringify({}) });
+    alert('Push test sent.');
   } catch (error) {
-    showInfo(error.message);
+    alert(error.message);
   }
 });
 
-$('#testPushBtnTwo').addEventListener('click', async () => {
-  try {
-    if (!pushConfigured) {
-      showInfo('Server push is not connected on this Netlify app yet. Add the VAPID keys in Netlify first, then this button will send a real push alert.');
-      return;
-    }
-    await ensurePushSubscription();
-    await api('/api/notifications/test', { method: 'POST' });
-    showInfo('Push test alert sent.');
-  } catch (error) {
-    showInfo(error.message);
+promptList.addEventListener('click', async (event) => {
+  const button = event.target.closest('button[data-action]');
+  if (!button) return;
+  const promptId = button.dataset.id;
+
+  if (button.dataset.action === 'banker') {
+    await api(`/api/prompts/${promptId}/flags`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        priority: button.dataset.priority === '1',
+        bankerFocus: button.dataset.banker !== '1',
+      }),
+    });
   }
+
+  if (button.dataset.action === 'priority') {
+    await api(`/api/prompts/${promptId}/flags`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        priority: button.dataset.priority !== '1',
+        bankerFocus: button.dataset.banker === '1',
+      }),
+    });
+  }
+
+  if (button.dataset.action === 'schedule') {
+    await api('/api/schedules', {
+      method: 'POST',
+      body: JSON.stringify({
+        promptId,
+        time: state.settings?.default_scan_time || '21:00',
+        days: state.settings?.default_days || 'daily',
+        notify: true,
+      }),
+    });
+  }
+
+  if (button.dataset.action === 'delete') {
+    await api(`/api/prompts/${promptId}`, { method: 'DELETE' });
+  }
+
+  await refresh();
+});
+
+$$('.nav-btn').forEach((button) => {
+  button.addEventListener('click', () => switchTab(button.dataset.tab));
 });
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js').catch(() => {});
 }
 
+installZoomBlockers();
 refresh().catch((error) => {
   console.error(error);
-  latestAlert.className = 'alert-preview empty';
-  latestAlert.textContent = 'Could not load app data yet.';
+  $('#pushServerNote').textContent = 'App loaded with a connection issue. Refresh and try again.';
 });

@@ -12,7 +12,8 @@
     "@netlify/blobs": "^9.0.3",
     "@netlify/functions": "^4.2.0",
     "luxon": "^3.5.0",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "openai": "^4.104.0"
   },
   "devDependencies": {
     "netlify-cli": "^23.2.0"

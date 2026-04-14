@@ -1,5 +1,5 @@
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open('banker-signals-live-v1').then((cache) => cache.addAll([
+  event.waitUntil(caches.open('banker-signals-fast-v2').then((cache) => cache.addAll([
     '/', '/index.html', '/styles.css', '/app.js', '/manifest.json', '/icons/icon-192.png', '/icons/icon-512.png'
   ])));
   self.skipWaiting();
@@ -14,7 +14,7 @@ self.addEventListener('fetch', (event) => {
 });
 
 self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.json() : { title: 'Banker Signals Live', body: 'New betting alert ready.', url: '/' };
+  const data = event.data ? event.data.json() : { title: 'Banker Signals', body: 'New banker alert ready.', url: '/' };
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,

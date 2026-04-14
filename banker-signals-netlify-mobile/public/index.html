@@ -2,58 +2,75 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta name="format-detection" content="telephone=no" />
   <title>Banker Signals</title>
-  <meta name="theme-color" content="#153a2c" />
-  <meta name="description" content="Simple banker prompt scanner with colourful mobile-friendly notifications." />
+  <meta name="theme-color" content="#214737" />
+  <meta name="description" content="Fast mobile banker alerts app with fixed bottom menu and push notifications." />
   <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <div class="app-shell">
-    <header class="hero-card">
-      <div class="hero-topline">
-        <span class="hero-badge">Banker alerts only</span>
-        <span class="hero-badge alt">Australia/Melbourne</span>
-      </div>
-      <div class="hero-main">
-        <div>
-          <p class="eyebrow">Simple banker alerts</p>
-          <h1>Banker Signals</h1>
-          <p class="hero-text">
-            Save prompts, run one daily scan, and get only the <strong>banker games</strong> section.
-          </p>
+    <header class="top-wrap">
+      <section class="hero-card">
+        <div class="hero-row">
+          <span class="pill pill-green">Banker alerts</span>
+          <span class="pill pill-gold">Melbourne time</span>
         </div>
-        <div class="hero-scoreboard">
-          <div class="score-pill lime"><span>Prompts</span><strong id="promptCount">0</strong></div>
-          <div class="score-pill coral"><span>Banker on</span><strong id="bankerCount">0</strong></div>
-          <div class="score-pill blue"><span>Schedules</span><strong id="scheduleCount">0</strong></div>
-          <div class="score-pill gold"><span>Push</span><strong id="pushStatus">Checking…</strong></div>
+        <div class="hero-main">
+          <div>
+            <p class="eyebrow">Fast daily scanner</p>
+            <h1>Banker Signals</h1>
+            <p class="hero-text">Save prompts. Set one time. Get the banker games first.</p>
+          </div>
+          <div class="hero-actions compact-actions">
+            <button class="primary-btn" id="enablePushBtn" type="button">Enable notifications</button>
+            <button class="secondary-btn" id="testPushBtn" type="button">Send push test</button>
+          </div>
         </div>
-      </div>
-      <div class="hero-actions">
-        <button class="primary-btn" id="enablePushBtn" type="button">Allow notifications</button>
-        <button class="secondary-btn" id="testPushBtn" type="button">Local test alert</button>
-        <p class="push-note" id="pushServerNote">Checking alert setup…</p>
-      </div>
+        <div class="hero-stats">
+          <article class="stat-card stat-green">
+            <span>Prompts</span>
+            <strong id="promptCount">0</strong>
+          </article>
+          <article class="stat-card stat-pink">
+            <span>Banker on</span>
+            <strong id="bankerCount">0</strong>
+          </article>
+          <article class="stat-card stat-blue">
+            <span>Scan time</span>
+            <strong id="nextScanLabel">9:00 PM</strong>
+          </article>
+          <article class="stat-card stat-gold">
+            <span>Push</span>
+            <strong id="pushStatus">Checking</strong>
+          </article>
+        </div>
+        <p class="server-note" id="pushServerNote">Checking notification setup…</p>
+      </section>
     </header>
 
-    <main class="screen-stack">
+    <main class="content-stack">
       <section class="screen active" id="screen-home">
-        <section class="panel panel-highlight">
-          <div class="panel-head">
+        <section class="panel feature-panel">
+          <div class="section-head">
             <div>
               <p class="eyebrow">Daily scan time</p>
-              <h2>One daily scan time</h2>
-              <p class="subtle">Set one time and use it across your banker prompts.</p>
+              <h2>One time for all banker prompts</h2>
             </div>
           </div>
           <form id="settingsForm" class="form-stack">
-            <div class="field-grid field-grid-2">
-              <label>Default scan time
+            <div class="field-grid two-up">
+              <label>
+                <span>Scan time</span>
                 <input type="time" name="defaultScanTime" id="defaultScanTime" value="21:00" />
               </label>
-              <label>Days
+              <label>
+                <span>Days</span>
                 <select name="defaultDays" id="defaultDays">
                   <option value="daily">Daily</option>
                   <option value="weekdays">Weekdays</option>
@@ -61,67 +78,57 @@
                 </select>
               </label>
             </div>
-            <div class="feature-row">
-              <div class="feature-chip green">✅ Banker alerts first</div>
-              <div class="feature-chip pink">🎯 One-tap banker on/off</div>
-              <div class="feature-chip blue">⏰ Apply one scan time</div>
-            </div>
-            <div class="button-row">
-              <button class="primary-btn" type="submit">Save default scan time</button>
-              <button class="secondary-btn" id="applyToBankerBtn" type="button">Use this time for all banker prompts</button>
+            <div class="button-row two-up-buttons">
+              <button class="primary-btn" type="submit">Save scan time</button>
+              <button class="secondary-btn" id="applyToBankerBtn" type="button">Apply to banker prompts</button>
             </div>
           </form>
         </section>
 
-        <section class="grid-2">
-          <article class="panel mini-panel dark-panel">
-            <div class="panel-head compact">
+        <section class="grid-panels">
+          <article class="panel mini-panel accent-panel">
+            <div class="section-head compact-head">
               <div>
                 <p class="eyebrow">Quick status</p>
-                <h3>Quick view</h3>
+                <h3>App status</h3>
               </div>
             </div>
             <div class="status-list">
-              <div class="status-row"><span>Next scan time</span><strong id="nextScanLabel">9:00 PM</strong></div>
-              <div class="status-row"><span>Banker notifications</span><strong id="notificationLabel">Not enabled</strong></div>
-              <div class="status-row"><span>Latest banker preview</span><strong id="latestPromptLabel">Waiting</strong></div>
+              <div class="status-row"><span>Notifications</span><strong id="notificationLabel">Not enabled</strong></div>
+              <div class="status-row"><span>Latest alert</span><strong id="latestPromptLabel">Waiting</strong></div>
+              <div class="status-row"><span>Menu mode</span><strong>Fixed bottom</strong></div>
             </div>
           </article>
 
           <article class="panel mini-panel">
-            <div class="panel-head compact">
+            <div class="section-head compact-head">
               <div>
-                <p class="eyebrow">Latest banker alert</p>
-                <h3>Banker preview</h3>
+                <p class="eyebrow">Banker alert</p>
+                <h3>Latest preview</h3>
               </div>
-              <button class="ghost-btn" id="generateSampleBtn" type="button" >Preview</button>
+              <button class="ghost-btn" id="generateSampleBtn" type="button">Create alert</button>
             </div>
-            <div id="latestAlert" class="alert-preview empty">No banker alert yet.</div>
+            <div id="latestAlert" class="latest-alert empty">No banker alert yet.</div>
           </article>
         </section>
       </section>
 
       <section class="screen" id="screen-prompts">
-        <section class="panel panel-highlight-secondary">
-          <div class="panel-head">
+        <section class="panel feature-panel alt-panel">
+          <div class="section-head">
             <div>
               <p class="eyebrow">Prompt vault</p>
-              <h2>Add many prompts fast</h2>
-              <p class="subtle">Paste your prompts in one go. Separate each prompt with <strong>---</strong>.</p>
+              <h2>Add prompts in one go</h2>
             </div>
           </div>
           <form id="bulkForm" class="form-stack">
-            <label>Bulk prompt paste
-              <textarea name="text" rows="12" placeholder="Top Banker Legs
-Scan global yet-to-start fixtures and return the cleanest banker games section.
-
----
-
-Under 4.5 Goals Bankers
-Find the safest under 4.5 goals football picks..." required></textarea>
+            <label>
+              <span>Paste prompts</span>
+              <textarea name="text" rows="10" placeholder="Top Banker Legs&#10;Scan global yet-to-start fixtures and return the cleanest banker games section.&#10;&#10;---&#10;&#10;Under 4.5 Goals Bankers&#10;Find the safest under 4.5 goals football picks..." required></textarea>
             </label>
-            <div class="field-grid field-grid-3">
-              <label>Category
+            <div class="field-grid three-up">
+              <label>
+                <span>Category</span>
                 <select name="category">
                   <option>Banker</option>
                   <option>Accumulator</option>
@@ -130,10 +137,12 @@ Find the safest under 4.5 goals football picks..." required></textarea>
                   <option>Custom</option>
                 </select>
               </label>
-              <label>Scan time
+              <label>
+                <span>Time</span>
                 <input name="scheduleTime" type="time" id="bulkScheduleTime" value="21:00" />
               </label>
-              <label>Days
+              <label>
+                <span>Days</span>
                 <select name="days" id="bulkDays">
                   <option value="daily">Daily</option>
                   <option value="weekdays">Weekdays</option>
@@ -141,126 +150,99 @@ Find the safest under 4.5 goals football picks..." required></textarea>
                 </select>
               </label>
             </div>
-            <div class="toggle-row">
-              <label class="toggle-pill"><input type="checkbox" name="priority" /> Priority all</label>
-              <label class="toggle-pill"><input type="checkbox" name="bankerFocus" checked /> Banker alert all</label>
-              <label class="toggle-pill"><input type="checkbox" name="autoSchedule" checked /> Auto schedule all</label>
-              <label class="toggle-pill"><input type="checkbox" name="notify" checked /> Notify all</label>
+            <div class="toggle-grid">
+              <label class="toggle-chip"><input type="checkbox" name="priority" /> Priority all</label>
+              <label class="toggle-chip"><input type="checkbox" name="bankerFocus" checked /> Banker alert all</label>
+              <label class="toggle-chip"><input type="checkbox" name="autoSchedule" checked /> Add schedule</label>
+              <label class="toggle-chip"><input type="checkbox" name="notify" checked /> Send notifications</label>
             </div>
             <button class="primary-btn" type="submit">Import prompts</button>
           </form>
         </section>
 
         <section class="panel">
-          <div class="panel-head compact">
+          <div class="section-head compact-head">
             <div>
               <p class="eyebrow">Saved prompts</p>
-              <h3>Banker switches</h3>
+              <h3>Your list</h3>
             </div>
           </div>
           <div id="promptList" class="prompt-list"></div>
         </section>
       </section>
 
-      <section class="screen" id="screen-shots">
-        <section class="panel panel-highlight-shots">
-          <div class="panel-head">
+      <section class="screen" id="screen-alerts">
+        <section class="panel feature-panel shots-panel">
+          <div class="section-head">
             <div>
-              <p class="eyebrow">Shots banker bands</p>
-              <h2>Save your shot bands</h2>
-              <p class="subtle">These stand out inside banker alerts.</p>
+              <p class="eyebrow">Shot bands</p>
+              <h2>Key banker numbers</h2>
             </div>
           </div>
           <form id="bandsForm" class="form-stack">
-            <div class="band-grid">
-              <article class="band-card">
-                <div class="band-head">
-                  <span class="band-icon total">◎</span>
-                  <div>
-                    <h3>Total shots</h3>
-                    <p class="subtle">Main total shots range.</p>
-                  </div>
-                </div>
-                <div class="field-grid field-grid-3">
-                  <label>Upper band total shots
-                    <input name="shotsUpper" id="shotsUpper" placeholder="28+" />
-                  </label>
-                  <label>Lower band total shots
-                    <input name="shotsLower" id="shotsLower" placeholder="19+" />
-                  </label>
-                  <label>Recommended banker total shots
-                    <input name="shotsRecommended" id="shotsRecommended" placeholder="22+" />
-                  </label>
-                </div>
-              </article>
-
-              <article class="band-card target-card">
-                <div class="band-head">
-                  <span class="band-icon target">◉</span>
-                  <div>
-                    <h3>Total shots on target</h3>
-                    <p class="subtle">Main shots on target range.</p>
-                  </div>
-                </div>
-                <div class="field-grid field-grid-3">
-                  <label>Upper band total shots on target
-                    <input name="sotUpper" id="sotUpper" placeholder="11+" />
-                  </label>
-                  <label>Lower band total shots on target
-                    <input name="sotLower" id="sotLower" placeholder="7+" />
-                  </label>
-                  <label>Recommended total shots on target
-                    <input name="sotRecommended" id="sotRecommended" placeholder="8+" />
-                  </label>
-                </div>
-              </article>
+            <div class="field-grid three-up">
+              <label>
+                <span>Upper band total shots</span>
+                <input name="shotsUpper" id="shotsUpper" placeholder="28+" />
+              </label>
+              <label>
+                <span>Lower band total shots</span>
+                <input name="shotsLower" id="shotsLower" placeholder="19+" />
+              </label>
+              <label>
+                <span>Recommended banker total shots</span>
+                <input name="shotsRecommended" id="shotsRecommended" placeholder="22+" />
+              </label>
             </div>
-            <div class="button-row">
-              <button class="primary-btn" type="submit">Save shot bands</button>
-              <button class="ghost-btn" id="fillBandsBtn" type="button">Use sample bands</button>
+            <div class="field-grid three-up">
+              <label>
+                <span>Upper band total shots on target</span>
+                <input name="sotUpper" id="sotUpper" placeholder="11+" />
+              </label>
+              <label>
+                <span>Lower band total shots on target</span>
+                <input name="sotLower" id="sotLower" placeholder="7+" />
+              </label>
+              <label>
+                <span>Recommended total shots on target</span>
+                <input name="sotRecommended" id="sotRecommended" placeholder="8+" />
+              </label>
+            </div>
+            <div class="button-row two-up-buttons">
+              <button class="primary-btn" type="submit">Save bands</button>
+              <button class="secondary-btn" id="fillBandsBtn" type="button">Use example bands</button>
             </div>
           </form>
         </section>
-      </section>
 
-      <section class="screen" id="screen-alerts">
-        <section class="panel panel-highlight-alerts">
-          <div class="panel-head">
+        <section class="panel">
+          <div class="section-head compact-head">
             <div>
-              <p class="eyebrow">Banker notifications</p>
-              <h2>Simple alert cards</h2>
-              <p class="subtle">Only the banker section comes first.</p>
+              <p class="eyebrow">Alert board</p>
+              <h3>Banker games first</h3>
             </div>
-          </div>
-          <div class="button-row">
-            <button class="primary-btn" id="previewAlertBtn" type="button">Preview banker card</button>
-            <button class="secondary-btn" id="testPushBtnTwo" type="button">Server push test</button>
           </div>
           <div id="alertBoard" class="alert-board"></div>
         </section>
       </section>
     </main>
+
+    <nav class="bottom-nav" aria-label="Main navigation">
+      <button class="nav-btn active" type="button" data-tab="home">
+        <span class="nav-icon">⌂</span>
+        <span>Home</span>
+      </button>
+      <button class="nav-btn" type="button" data-tab="prompts">
+        <span class="nav-icon">✦</span>
+        <span>Prompts</span>
+      </button>
+      <button class="nav-btn" type="button" data-tab="alerts">
+        <span class="nav-icon">◎</span>
+        <span>Alerts</span>
+      </button>
+    </nav>
   </div>
 
-  <nav class="bottom-nav" aria-label="Main navigation">
-    <button class="nav-btn active" data-tab="home">
-      <span class="nav-icon nav-home">⌂</span>
-      <span>Home</span>
-    </button>
-    <button class="nav-btn" data-tab="prompts">
-      <span class="nav-icon nav-prompts">✦</span>
-      <span>Prompts</span>
-    </button>
-    <button class="nav-btn" data-tab="shots">
-      <span class="nav-icon nav-shots">◎</span>
-      <span>Shots</span>
-    </button>
-    <button class="nav-btn" data-tab="alerts">
-      <span class="nav-icon nav-alerts">🔔</span>
-      <span>Alerts</span>
-    </button>
-  </nav>
-
-  <script src="/app.js"></script>
+  <script src="/app.js" defer></script>
 </body>
 </html>

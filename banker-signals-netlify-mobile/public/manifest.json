@@ -3,19 +3,11 @@
   "short_name": "BankerSignals",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f1713",
-  "theme_color": "#153a2c",
-  "description": "Simple banker prompt scanner with colourful mobile-friendly notifications.",
+  "background_color": "#edf3ee",
+  "theme_color": "#214737",
+  "description": "Fast mobile banker alerts app with fixed bottom navigation and push notifications.",
   "icons": [
-    {
-      "src": "/icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
+    {"src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png"}
   ]
 }
