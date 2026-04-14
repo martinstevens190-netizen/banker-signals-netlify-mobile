@@ -4,11 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="format-detection" content="telephone=no" />
   <title>Banker Signals</title>
-  <meta name="theme-color" content="#214737" />
-  <meta name="description" content="Fast mobile banker alerts app with fixed bottom menu and push notifications." />
+  <meta name="theme-color" content="#101714" />
+  <meta name="description" content="Dark mobile banker alerts app with fixed bottom navigation and push notifications." />
   <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" href="/icons/icon-192.png" />
   <link rel="stylesheet" href="/styles.css" />
@@ -18,14 +18,14 @@
     <header class="top-wrap">
       <section class="hero-card">
         <div class="hero-row">
-          <span class="pill pill-green">Banker alerts</span>
-          <span class="pill pill-gold">Melbourne time</span>
+          <span class="pill pill-green">Banker only</span>
+          <span class="pill pill-slate">Dark mode</span>
         </div>
         <div class="hero-main">
           <div>
-            <p class="eyebrow">Fast daily scanner</p>
+            <p class="eyebrow">Prompt scanner</p>
             <h1>Banker Signals</h1>
-            <p class="hero-text">Save prompts. Set one time. Get the banker games first.</p>
+            <p class="hero-text">Save your prompts, set one time, and open banker alerts fast.</p>
           </div>
           <div class="hero-actions compact-actions">
             <button class="primary-btn" id="enablePushBtn" type="button">Enable notifications</button>
@@ -37,11 +37,11 @@
             <span>Prompts</span>
             <strong id="promptCount">0</strong>
           </article>
-          <article class="stat-card stat-pink">
+          <article class="stat-card stat-olive">
             <span>Banker on</span>
             <strong id="bankerCount">0</strong>
           </article>
-          <article class="stat-card stat-blue">
+          <article class="stat-card stat-slate">
             <span>Scan time</span>
             <strong id="nextScanLabel">9:00 PM</strong>
           </article>
@@ -103,10 +103,10 @@
           <article class="panel mini-panel">
             <div class="section-head compact-head">
               <div>
-                <p class="eyebrow">Banker alert</p>
+                <p class="eyebrow">Run now</p>
                 <h3>Latest preview</h3>
               </div>
-              <button class="ghost-btn" id="generateSampleBtn" type="button">Create alert</button>
+              <button class="ghost-btn" id="generateSampleBtn" type="button">Run banker scan</button>
             </div>
             <div id="latestAlert" class="latest-alert empty">No banker alert yet.</div>
           </article>
@@ -172,54 +172,11 @@
       </section>
 
       <section class="screen" id="screen-alerts">
-        <section class="panel feature-panel shots-panel">
+        <section class="panel feature-panel">
           <div class="section-head">
             <div>
-              <p class="eyebrow">Shot bands</p>
-              <h2>Key banker numbers</h2>
-            </div>
-          </div>
-          <form id="bandsForm" class="form-stack">
-            <div class="field-grid three-up">
-              <label>
-                <span>Upper band total shots</span>
-                <input name="shotsUpper" id="shotsUpper" placeholder="28+" />
-              </label>
-              <label>
-                <span>Lower band total shots</span>
-                <input name="shotsLower" id="shotsLower" placeholder="19+" />
-              </label>
-              <label>
-                <span>Recommended banker total shots</span>
-                <input name="shotsRecommended" id="shotsRecommended" placeholder="22+" />
-              </label>
-            </div>
-            <div class="field-grid three-up">
-              <label>
-                <span>Upper band total shots on target</span>
-                <input name="sotUpper" id="sotUpper" placeholder="11+" />
-              </label>
-              <label>
-                <span>Lower band total shots on target</span>
-                <input name="sotLower" id="sotLower" placeholder="7+" />
-              </label>
-              <label>
-                <span>Recommended total shots on target</span>
-                <input name="sotRecommended" id="sotRecommended" placeholder="8+" />
-              </label>
-            </div>
-            <div class="button-row two-up-buttons">
-              <button class="primary-btn" type="submit">Save bands</button>
-              <button class="secondary-btn" id="fillBandsBtn" type="button">Use example bands</button>
-            </div>
-          </form>
-        </section>
-
-        <section class="panel">
-          <div class="section-head compact-head">
-            <div>
               <p class="eyebrow">Alert board</p>
-              <h3>Banker games first</h3>
+              <h2>Banker games first</h2>
             </div>
           </div>
           <div id="alertBoard" class="alert-board"></div>
@@ -242,7 +199,6 @@
       </button>
     </nav>
   </div>
-
-  <script src="/app.js" defer></script>
+  <script src="/app.js"></script>
 </body>
 </html>

@@ -1,3 +1,4 @@
+
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
@@ -37,18 +38,26 @@ function displayTime(hhmm = '21:00') {
   return dt.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' });
 }
 
-function formatDays(value = 'daily') {
-  return value === 'weekdays' ? 'Weekdays' : value === 'weekends' ? 'Weekends' : 'Daily';
-}
-
 function badge(text, tone = 'soft') {
   return `<span class="badge ${tone}">${escapeHtml(text)}</span>`;
 }
 
-function switchTab(tab) {
+function switchTab(tab, { updateUrl = true } = {}) {
   $$('.screen').forEach((screen) => screen.classList.toggle('active', screen.id === `screen-${tab}`));
   $$('.nav-btn').forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === tab));
+  if (updateUrl) {
+    const hash = tab === 'home' ? '#home' : tab === 'prompts' ? '#prompts' : '#alerts';
+    if (window.location.hash !== hash) history.replaceState({}, '', hash);
+  }
   window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+function getInitialTab() {
+  const hash = (window.location.hash || '').replace('#', '').toLowerCase();
+  if (['home', 'prompts', 'alerts'].includes(hash)) return hash;
+  const tab = new URLSearchParams(window.location.search).get('tab');
+  if (['home', 'prompts', 'alerts'].includes((tab || '').toLowerCase())) return tab.toLowerCase();
+  return 'home';
 }
 
 function updatePushStatus() {
@@ -73,12 +82,6 @@ function fillSettings(settings) {
   $('#defaultDays').value = settings.default_days || 'daily';
   $('#bulkScheduleTime').value = settings.default_scan_time || '21:00';
   $('#bulkDays').value = settings.default_days || 'daily';
-  $('#shotsUpper').value = settings.bands?.shots_total?.upper || '';
-  $('#shotsLower').value = settings.bands?.shots_total?.lower || '';
-  $('#shotsRecommended').value = settings.bands?.shots_total?.recommended || '';
-  $('#sotUpper').value = settings.bands?.shots_on_target?.upper || '';
-  $('#sotLower').value = settings.bands?.shots_on_target?.lower || '';
-  $('#sotRecommended').value = settings.bands?.shots_on_target?.recommended || '';
   $('#nextScanLabel').textContent = `${displayTime(settings.default_scan_time || '21:00')}`;
 }
 
@@ -98,7 +101,7 @@ function renderPrompts(prompts) {
       <p class="subtle">${escapeHtml(prompt.body)}</p>
       <div class="badge-row">
         ${badge(prompt.category || 'Custom', 'green')}
-        ${badge(prompt.banker_focus ? 'Banker alert on' : 'Banker alert off', prompt.banker_focus ? 'pink' : 'soft')}
+        ${badge(prompt.banker_focus ? 'Banker alert on' : 'Banker alert off', prompt.banker_focus ? 'olive' : 'soft')}
         ${badge(`${prompt.schedule_count || 0} schedules`, 'blue')}
         ${prompt.priority ? badge('Priority', 'gold') : ''}
       </div>
@@ -118,13 +121,12 @@ function renderAlerts(alerts) {
     latestAlert.className = 'latest-alert empty';
     latestAlert.textContent = 'No banker alert yet.';
     $('#latestPromptLabel').textContent = 'Waiting';
-    alertBoard.innerHTML = '<div class="alert-card empty">Create an alert to see banker games here.</div>';
+    alertBoard.innerHTML = '<div class="alert-card empty">Run a banker scan to see alerts here.</div>';
     return;
   }
 
   const latest = alerts[0]?.payload || {};
   const banker = latest.banker || [];
-  const bands = latest.bands || {};
   $('#latestPromptLabel').textContent = latest.promptName || 'Latest banker run';
   latestAlert.className = 'latest-alert';
   latestAlert.innerHTML = `
@@ -135,29 +137,17 @@ function renderAlerts(alerts) {
     </article>
   `;
 
-  alertBoard.innerHTML = `
-    <article class="alert-card dark">
-      <h3>✅ Cleanest banker games</h3>
-      <p class="subtle">${escapeHtml(latest.promptName || 'Latest banker run')}</p>
-      <ul>${banker.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
-    </article>
-    <article class="alert-card">
-      <h3>Total shots</h3>
-      <div class="shot-band-list">
-        <div class="shot-line"><span>Upper band total shots</span><strong>${escapeHtml(bands.shots_total?.upper || '-')}</strong></div>
-        <div class="shot-line"><span>Lower band total shots</span><strong>${escapeHtml(bands.shots_total?.lower || '-')}</strong></div>
-        <div class="shot-line"><span>Recommended banker total shots</span><strong>${escapeHtml(bands.shots_total?.recommended || '-')}</strong></div>
-      </div>
-    </article>
-    <article class="alert-card">
-      <h3>Total shots on target</h3>
-      <div class="shot-band-list">
-        <div class="shot-line"><span>Upper band total shots on target</span><strong>${escapeHtml(bands.shots_on_target?.upper || '-')}</strong></div>
-        <div class="shot-line"><span>Lower band total shots on target</span><strong>${escapeHtml(bands.shots_on_target?.lower || '-')}</strong></div>
-        <div class="shot-line"><span>Recommended total shots on target</span><strong>${escapeHtml(bands.shots_on_target?.recommended || '-')}</strong></div>
-      </div>
-    </article>
-  `;
+  alertBoard.innerHTML = alerts.map((entry) => {
+    const payload = entry.payload || {};
+    const items = payload.banker || [];
+    return `
+      <article class="alert-card dark">
+        <h3>${escapeHtml(payload.title || '✅ Banker games')}</h3>
+        <p class="subtle">${escapeHtml(payload.promptName || 'Banker scan')} • ${new Date(payload.createdAt || entry.created_at || Date.now()).toLocaleString('en-AU', { timeZone: 'Australia/Melbourne' })}</p>
+        <ul>${items.length ? items.map((item) => `<li>${escapeHtml(item)}</li>`).join('') : '<li>No banker games returned.</li>'}</ul>
+      </article>
+    `;
+  }).join('');
 }
 
 async function refresh() {
@@ -184,7 +174,7 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 async function ensurePushSubscription() {
-  if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+  if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
     throw new Error('Push notifications are not supported on this device/browser.');
   }
   if (!vapidPublicKey) {
@@ -205,7 +195,7 @@ async function ensurePushSubscription() {
 }
 
 async function enableNotifications() {
-  if (!('Notification' in window)) {
+  if (!("Notification" in window)) {
     alert('Notifications are not supported on this device.');
     return;
   }
@@ -286,39 +276,6 @@ $('#bulkForm').addEventListener('submit', async (event) => {
   switchTab('prompts');
 });
 
-$('#bandsForm').addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  await api('/api/settings', {
-    method: 'PATCH',
-    body: JSON.stringify({
-      bands: {
-        shots_total: {
-          upper: form.get('shotsUpper'),
-          lower: form.get('shotsLower'),
-          recommended: form.get('shotsRecommended'),
-        },
-        shots_on_target: {
-          upper: form.get('sotUpper'),
-          lower: form.get('sotLower'),
-          recommended: form.get('sotRecommended'),
-        },
-      },
-    }),
-  });
-  await refresh();
-  switchTab('alerts');
-});
-
-$('#fillBandsBtn').addEventListener('click', () => {
-  $('#shotsUpper').value = '28+';
-  $('#shotsLower').value = '19+';
-  $('#shotsRecommended').value = '22+';
-  $('#sotUpper').value = '11+';
-  $('#sotLower').value = '7+';
-  $('#sotRecommended').value = '8+';
-});
-
 $('#generateSampleBtn').addEventListener('click', async () => {
   const bankerPrompt = state.prompts.find((item) => item.banker_focus) || state.prompts[0];
   await api('/api/alerts/generate-sample', {
@@ -391,11 +348,16 @@ $$('.nav-btn').forEach((button) => {
   button.addEventListener('click', () => switchTab(button.dataset.tab));
 });
 
+window.addEventListener('hashchange', () => {
+  switchTab(getInitialTab(), { updateUrl: false });
+});
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js').catch(() => {});
 }
 
 installZoomBlockers();
+switchTab(getInitialTab(), { updateUrl: false });
 refresh().catch((error) => {
   console.error(error);
   $('#pushServerNote').textContent = 'App loaded with a connection issue. Refresh and try again.';

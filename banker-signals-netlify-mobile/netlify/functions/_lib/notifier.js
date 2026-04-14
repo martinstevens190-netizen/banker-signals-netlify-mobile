@@ -26,7 +26,7 @@ export async function subscribe(subscription) {
   return { ok: true };
 }
 
-export async function sendPushToAll({ title, body, url = '/' }) {
+export async function sendPushToAll({ title, body, url = '/#alerts' }) {
   if (!pushReady) {
     return { sent: 0, skipped: true, reason: 'VAPID keys missing' };
   }

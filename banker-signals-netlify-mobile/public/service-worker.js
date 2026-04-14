@@ -1,5 +1,5 @@
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open('banker-signals-fast-v2').then((cache) => cache.addAll([
+  event.waitUntil(caches.open('banker-signals-dark-v1').then((cache) => cache.addAll([
     '/', '/index.html', '/styles.css', '/app.js', '/manifest.json', '/icons/icon-192.png', '/icons/icon-512.png'
   ])));
   self.skipWaiting();
@@ -27,10 +27,16 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || '/';
-  event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientsList) => {
+  const targetUrl = event.notification.data?.url || '/#alerts';
+  event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clientsList) => {
     for (const client of clientsList) {
-      if ('focus' in client) return client.focus();
+      if ('focus' in client) {
+        await client.focus();
+        if ('navigate' in client) {
+          return client.navigate(targetUrl);
+        }
+        return client;
+      }
     }
     if (clients.openWindow) return clients.openWindow(targetUrl);
   }));

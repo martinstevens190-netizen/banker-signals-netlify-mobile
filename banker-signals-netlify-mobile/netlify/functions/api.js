@@ -196,7 +196,7 @@ export default async (req) => {
   }
 
   if (req.method === 'POST' && resource === 'notifications' && resourceId === 'test') {
-    return json(await sendPushToAll({ title: '✅ Cleanest Top Banker Legs', body: 'Your banker games notification is ready.', url: '/' }));
+    return json(await sendPushToAll({ title: '✅ Cleanest Top Banker Legs', body: 'Your banker games notification is ready.', url: '/#alerts' }));
   }
 
   return json({ error: 'Not found' }, 404);
