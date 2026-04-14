@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="format-detection" content="telephone=no" />
+  <title>Banker Signals</title>
+  <meta name="theme-color" content="#153a2c" />
+  <meta name="description" content="Fast banker prompt scanner with a mobile-first layout and push notifications." />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero-card">
+      <div class="hero-topline">
+        <span class="hero-badge">Banker alerts only</span>
+        <span class="hero-badge alt">Australia/Melbourne</span>
+      </div>
+      <div class="hero-main">
+        <div>
+          <p class="eyebrow">Daily banker alerts</p>
+          <h1>Banker Signals</h1>
+          <p class="hero-text">
+            Save prompts, set one scan time, and get the <strong>banker games</strong> notification first.
+          </p>
+        </div>
+        <div class="hero-scoreboard">
+          <div class="score-pill lime"><span>Prompts</span><strong id="promptCount">0</strong></div>
+          <div class="score-pill coral"><span>Banker on</span><strong id="bankerCount">0</strong></div>
+          <div class="score-pill blue"><span>Schedules</span><strong id="scheduleCount">0</strong></div>
+          <div class="score-pill gold"><span>Push</span><strong id="pushStatus">Checking…</strong></div>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <button class="primary-btn" id="enablePushBtn" type="button">Enable notifications</button>
+        <button class="secondary-btn" id="testPushBtn" type="button">Test notification</button>
+        <p class="push-note" id="pushServerNote">Checking alert setup…</p>
+      </div>
+    </header>
+
+    <main class="screen-stack">
+      <section class="screen active" id="screen-home">
+        <section class="panel panel-highlight">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Daily scan time</p>
+              <h2>Daily scan time</h2>
+              <p class="subtle">Use one clean daily time for all banker prompts.</p>
+            </div>
+          </div>
+          <form id="settingsForm" class="form-stack">
+            <div class="field-grid field-grid-2">
+              <label>Default scan time
+                <input type="time" name="defaultScanTime" id="defaultScanTime" value="21:00" />
+              </label>
+              <label>Days
+                <select name="defaultDays" id="defaultDays">
+                  <option value="daily">Daily</option>
+                  <option value="weekdays">Weekdays</option>
+                  <option value="weekends">Weekends</option>
+                </select>
+              </label>
+            </div>
+            <div class="feature-row">
+              <div class="feature-chip green">✅ Banker alerts first</div>
+              <div class="feature-chip pink">🎯 One-tap banker on/off</div>
+              <div class="feature-chip blue">⏰ Apply one scan time</div>
+            </div>
+            <div class="button-row">
+              <button class="primary-btn" type="submit">Save default scan time</button>
+              <button class="secondary-btn" id="applyToBankerBtn" type="button">Use this time for all banker prompts</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="grid-2">
+          <article class="panel mini-panel dark-panel">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Quick status</p>
+                <h3>Status</h3>
+              </div>
+            </div>
+            <div class="status-list">
+              <div class="status-row"><span>Next scan time</span><strong id="nextScanLabel">9:00 PM</strong></div>
+              <div class="status-row"><span>Banker notifications</span><strong id="notificationLabel">Not enabled</strong></div>
+              <div class="status-row"><span>Latest banker alert</span><strong id="latestPromptLabel">Waiting</strong></div>
+            </div>
+          </article>
+
+          <article class="panel mini-panel">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Latest banker alert</p>
+                <h3>Banker alert</h3>
+              </div>
+              <button class="ghost-btn" id="generateSampleBtn" type="button" >Create</button>
+            </div>
+            <div id="latestAlert" class="alert-preview empty">No banker alert yet.</div>
+          </article>
+        </section>
+      </section>
+
+      <section class="screen" id="screen-prompts">
+        <section class="panel panel-highlight-secondary">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Prompt vault</p>
+              <h2>Add your prompts</h2>
+              <p class="subtle">Paste your prompts in one go. Separate each prompt with <strong>---</strong>.</p>
+            </div>
+          </div>
+          <form id="bulkForm" class="form-stack">
+            <label>Bulk prompt paste
+              <textarea name="text" rows="12" placeholder="Top Banker Legs
+Scan global yet-to-start fixtures and return the cleanest banker games section.
+
+---
+
+Under 4.5 Goals Bankers
+Find the safest under 4.5 goals football picks..." required></textarea>
+            </label>
+            <div class="field-grid field-grid-3">
+              <label>Category
+                <select name="category">
+                  <option>Banker</option>
+                  <option>Accumulator</option>
+                  <option>Goals</option>
+                  <option>Double Chance</option>
+                  <option>Custom</option>
+                </select>
+              </label>
+              <label>Scan time
+                <input name="scheduleTime" type="time" id="bulkScheduleTime" value="21:00" />
+              </label>
+              <label>Days
+                <select name="days" id="bulkDays">
+                  <option value="daily">Daily</option>
+                  <option value="weekdays">Weekdays</option>
+                  <option value="weekends">Weekends</option>
+                </select>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <label class="toggle-pill"><input type="checkbox" name="priority" /> Priority all</label>
+              <label class="toggle-pill"><input type="checkbox" name="bankerFocus" checked /> Banker alert all</label>
+              <label class="toggle-pill"><input type="checkbox" name="autoSchedule" checked /> Auto schedule all</label>
+              <label class="toggle-pill"><input type="checkbox" name="notify" checked /> Notify all</label>
+            </div>
+            <button class="primary-btn" type="submit">Import prompts</button>
+          </form>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head compact">
+            <div>
+              <p class="eyebrow">Saved prompts</p>
+              <h3>Banker switches</h3>
+            </div>
+          </div>
+          <div id="promptList" class="prompt-list"></div>
+        </section>
+      </section>
+
+      <section class="screen" id="screen-shots">
+        <section class="panel panel-highlight-shots">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Shots banker bands</p>
+              <h2>Save your shot bands</h2>
+              <p class="subtle">These stand out inside banker alerts.</p>
+            </div>
+          </div>
+          <form id="bandsForm" class="form-stack">
+            <div class="band-grid">
+              <article class="band-card">
+                <div class="band-head">
+                  <span class="band-icon total">◎</span>
+                  <div>
+                    <h3>Total shots</h3>
+                    <p class="subtle">Main total shots range.</p>
+                  </div>
+                </div>
+                <div class="field-grid field-grid-3">
+                  <label>Upper band total shots
+                    <input name="shotsUpper" id="shotsUpper" placeholder="28+" />
+                  </label>
+                  <label>Lower band total shots
+                    <input name="shotsLower" id="shotsLower" placeholder="19+" />
+                  </label>
+                  <label>Recommended banker total shots
+                    <input name="shotsRecommended" id="shotsRecommended" placeholder="22+" />
+                  </label>
+                </div>
+              </article>
+
+              <article class="band-card target-card">
+                <div class="band-head">
+                  <span class="band-icon target">◉</span>
+                  <div>
+                    <h3>Total shots on target</h3>
+                    <p class="subtle">Main shots on target range.</p>
+                  </div>
+                </div>
+                <div class="field-grid field-grid-3">
+                  <label>Upper band total shots on target
+                    <input name="sotUpper" id="sotUpper" placeholder="11+" />
+                  </label>
+                  <label>Lower band total shots on target
+                    <input name="sotLower" id="sotLower" placeholder="7+" />
+                  </label>
+                  <label>Recommended total shots on target
+                    <input name="sotRecommended" id="sotRecommended" placeholder="8+" />
+                  </label>
+                </div>
+              </article>
+            </div>
+            <div class="button-row">
+              <button class="primary-btn" type="submit">Save shot bands</button>
+              <button class="ghost-btn" id="fillBandsBtn" type="button">Fill bands</button>
+            </div>
+          </form>
+        </section>
+      </section>
+
+      <section class="screen" id="screen-alerts">
+        <section class="panel panel-highlight-alerts">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Banker notifications</p>
+              <h2>Banker alerts</h2>
+              <p class="subtle">Only the banker games section is shown first.</p>
+            </div>
+          </div>
+          <div class="button-row">
+            <button class="primary-btn" id="previewAlertBtn" type="button">Create banker card</button>
+            <button class="secondary-btn" id="testPushBtnTwo" type="button">Send test push</button>
+          </div>
+          <div id="alertBoard" class="alert-board"></div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <nav class="bottom-nav" aria-label="Main navigation">
+    <button class="nav-btn active" data-tab="home">
+      <span class="nav-icon nav-home">⌂</span>
+      <span>Home</span>
+    </button>
+    <button class="nav-btn" data-tab="prompts">
+      <span class="nav-icon nav-prompts">✦</span>
+      <span>Prompts</span>
+    </button>
+    <button class="nav-btn" data-tab="shots">
+      <span class="nav-icon nav-shots">◎</span>
+      <span>Shots</span>
+    </button>
+    <button class="nav-btn" data-tab="alerts">
+      <span class="nav-icon nav-alerts">🔔</span>
+      <span>Alerts</span>
+    </button>
+  </nav>
+
+  <script src="/app.js"></script>
+</body>
+</html>
