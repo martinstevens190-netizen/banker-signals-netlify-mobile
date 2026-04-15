@@ -16,11 +16,9 @@ export default async () => {
     if (!shouldTrigger(schedule, dt)) continue;
     try {
       const output = await buildScanOutput({ promptName: schedule.prompt_name, promptBody: schedule.prompt_body, settings });
-      const alertId = id();
-      const saved = { id: alertId, title: output.title, payload: { ...output, alertId }, created_at: nowIso(), source: output.source || 'scheduled' };
-      await alertRepo.insert(saved);
+      await alertRepo.insert({ id: id(), title: output.title, payload: output, created_at: nowIso(), source: output.source || 'scheduled' });
       await runRepo.insert({ id: id(), run_name: schedule.prompt_name, status: 'Completed', summary: `Scheduled run completed for ${schedule.time_hhmm} (${schedule.days}).`, created_at: nowIso() });
-      if (schedule.notify) await sendPushToAll({ title: output.notificationTitle, body: output.notificationBody, url: `/?alert=${alertId}#alerts`, alertId });
+      if (schedule.notify) await sendPushToAll({ title: output.notificationTitle, body: output.notificationBody, url: '/#alerts' });
       await scheduleRepo.markTriggered(schedule.id, localDateString(), nowIso());
       results.push({ prompt: schedule.prompt_name, status: 'completed' });
     } catch (error) {

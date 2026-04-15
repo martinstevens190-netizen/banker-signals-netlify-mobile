@@ -6,7 +6,6 @@ const state = {
   settings: null,
   prompts: [],
   alerts: [],
-  targetAlertId: null,
 };
 
 let vapidPublicKey = '';
@@ -42,56 +41,20 @@ function badge(text, tone = 'soft') {
   return `<span class="badge ${tone}">${escapeHtml(text)}</span>`;
 }
 
-function currentUrl() {
-  return new URL(window.location.href);
-}
-
-function getTargetAlertId() {
-  const url = currentUrl();
-  return url.searchParams.get('alert') || '';
-}
-
-function setTargetAlertId(alertId) {
-  const url = currentUrl();
-  if (alertId) url.searchParams.set('alert', alertId);
-  else url.searchParams.delete('alert');
-  history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
-  state.targetAlertId = alertId || null;
-}
-
-function clearTargetAlertId() {
-  setTargetAlertId('');
-}
-
-function focusAlertCard(alertId, { smooth = true } = {}) {
-  if (!alertId) return;
-  const card = document.querySelector(`[data-alert-id="${CSS.escape(alertId)}"]`);
-  if (!card) return;
-  document.querySelectorAll('.alert-run-card.is-target').forEach((node) => node.classList.remove('is-target'));
-  card.classList.add('is-target');
-  card.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
-}
-
-
 function switchTab(tab, { updateUrl = true } = {}) {
   $$('.screen').forEach((screen) => screen.classList.toggle('active', screen.id === `screen-${tab}`));
   $$('.nav-btn').forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === tab));
   if (updateUrl) {
-    const url = currentUrl();
-    url.hash = tab === 'home' ? '#home' : tab === 'prompts' ? '#prompts' : '#alerts';
-    if (tab !== 'alerts') url.searchParams.delete('alert');
-    history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
-    state.targetAlertId = tab === 'alerts' ? (url.searchParams.get('alert') || null) : null;
+    const hash = tab === 'home' ? '#home' : tab === 'prompts' ? '#prompts' : '#alerts';
+    if (window.location.hash !== hash) history.replaceState({}, '', hash);
   }
   window.scrollTo({ top: 0, behavior: 'auto' });
 }
 
 function getInitialTab() {
-  const url = currentUrl();
-  if (url.searchParams.get('alert')) return 'alerts';
-  const hash = (url.hash || '').replace('#', '').toLowerCase();
+  const hash = (window.location.hash || '').replace('#', '').toLowerCase();
   if (['home', 'prompts', 'alerts'].includes(hash)) return hash;
-  const tab = url.searchParams.get('tab');
+  const tab = new URLSearchParams(window.location.search).get('tab');
   if (['home', 'prompts', 'alerts'].includes((tab || '').toLowerCase())) return tab.toLowerCase();
   return 'home';
 }
@@ -149,12 +112,6 @@ function renderPrompts(prompts) {
       </div>
     </article>
   `).join('');
-
-  const target = state.targetAlertId || getTargetAlertId();
-  if (target) {
-    state.targetAlertId = target;
-    window.requestAnimationFrame(() => focusAlertCard(target));
-  }
 }
 
 function localDateKey(value) {
@@ -298,8 +255,8 @@ function renderAlerts(alerts) {
               <span class="prompt-group-time">${formatTimeOnly(promptGroup.alerts[0]?.createdAt || Date.now())}</span>
             </div>
             <div class="alert-run-stack">
-              ${promptGroup.alerts.map(({ entry, payload, createdAt }, idx) => `
-                <section class="alert-run-card" id="alert-${entry.id || payload.alertId || slugify(promptGroup.promptName)}" data-alert-id="${entry.id || payload.alertId || slugify(promptGroup.promptName)}">
+              ${promptGroup.alerts.map(({ payload, createdAt }, idx) => `
+                <section class="alert-run-card">
                   <div class="alert-run-top">
                     <span class="run-pill">Run ${promptGroup.alerts.length - idx}</span>
                     <span class="run-time">${formatDateTime(createdAt)}</span>
@@ -324,7 +281,6 @@ async function refresh() {
     api('/api/alerts'),
   ]);
   state.config = config;
-  state.targetAlertId = getTargetAlertId() || state.targetAlertId;
   vapidPublicKey = config.vapidPublicKey || '';
   pushConfigured = Boolean(config.pushConfigured);
   fillSettings(settings);
@@ -520,7 +476,7 @@ $('#bulkForm').addEventListener('submit', async (event) => {
     switchTab('prompts');
     scrollToPromptList();
     const count = Number(result.createdCount || 0);
-    showToast(count ? `Saved ${count} prompt${count === 1 ? '' : 's'} to Saved prompts.` : 'Nothing was imported. Check your prompt format.');
+    showToast(count ? `Saved ${count} prompt${count === 1 ? '' : 's'} to Your list.` : 'Nothing was imported. Check your prompt format.');
   } catch (error) {
     showToast(error.message || 'Import failed.', 'error');
   } finally {
@@ -533,14 +489,13 @@ $('#generateSampleBtn').addEventListener('click', async (event) => {
   const button = event.currentTarget;
   try {
     setBusy(button, true, 'Running…');
-    const created = await api('/api/alerts/generate-sample', {
+    await api('/api/alerts/generate-sample', {
       method: 'POST',
       body: JSON.stringify({
         promptName: bankerPrompt?.name || 'Manual banker scan',
         promptBody: bankerPrompt?.body || 'Generate banker games',
       }),
     });
-    setTargetAlertId(created.id || created.payload?.alertId || '');
     await refreshAlerts();
     switchTab('alerts');
     showToast('Banker alert created.');
@@ -557,9 +512,8 @@ $('#testPushBtn').addEventListener('click', async (event) => {
   try {
     setBusy(button, true, 'Sending…');
     if (Notification.permission !== 'granted') await enableNotifications();
-    const result = await api('/api/notifications/test', { method: 'POST', body: JSON.stringify({}) });
-    if (result?.url) setTargetAlertId((new URL(result.url, window.location.origin)).searchParams.get('alert') || '');
-    showToast('Push test sent. Open the notification to jump straight to that alert.');
+    await api('/api/notifications/test', { method: 'POST', body: JSON.stringify({}) });
+    showToast('Push test sent.');
   } catch (error) {
     showToast(error.message || 'Push test failed.', 'error');
   } finally {
@@ -639,28 +593,14 @@ $$('.nav-btn').forEach((button) => {
 });
 
 window.addEventListener('hashchange', () => {
-  state.targetAlertId = getTargetAlertId() || null;
   switchTab(getInitialTab(), { updateUrl: false });
 });
-
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.addEventListener('message', (event) => {
-    const data = event.data || {};
-    if (data.type === 'OPEN_ALERT' && data.alertId) {
-      setTargetAlertId(data.alertId);
-      switchTab('alerts');
-      window.setTimeout(() => focusAlertCard(data.alertId), 120);
-    }
-  });
-}
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js').catch(() => {});
 }
 
 installZoomBlockers();
-state.targetAlertId = getTargetAlertId() || null;
 switchTab(getInitialTab(), { updateUrl: false });
 refresh().catch((error) => {
   console.error(error);

@@ -199,57 +199,19 @@ label span { display: block; font-size: 0.88rem; font-weight: 700; color: var(--
 .button-row { flex-wrap: wrap; }
 .two-up-buttons > * { flex: 1 1 100%; }
 .toggle-grid { flex-wrap: wrap; }
-.import-options {
-  display: grid;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(24,34,30,0.96), rgba(17,24,22,0.96));
-}
-.import-options-head { display: grid; gap: 6px; }
-.clearer-grid { display: grid; gap: 10px; }
-.toggle-row {
-  display: grid;
-  grid-template-columns: 46px 1fr;
-  gap: 12px;
+.toggle-chip {
+  display: inline-flex;
   align-items: center;
-  min-height: 72px;
-  padding: 12px 14px;
-  border-radius: 18px;
-  background: #111917;
-  border: 1px solid var(--line);
-}
-.toggle-row input {
-  appearance: none;
-  width: 42px;
-  height: 26px;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 14px;
   border-radius: 999px;
-  background: #1d2724;
-  border: 1px solid #32433b;
-  position: relative;
-  margin: 0;
+  background: #111917;
+  color: #d2dfd8;
+  border: 1px solid var(--line);
+  font-weight: 700;
 }
-.toggle-row input::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #d8e0db;
-  transition: transform 0.18s ease;
-}
-.toggle-row input:checked {
-  background: rgba(45,108,84,0.85);
-  border-color: rgba(73,151,117,0.9);
-}
-.toggle-row input:checked::after { transform: translateX(16px); }
-.toggle-row span { display: grid; gap: 4px; }
-.toggle-row strong { font-size: 0.96rem; color: #e7eeea; }
-.toggle-row small { color: var(--muted); line-height: 1.35; }
-
+.toggle-chip input { width: auto; margin: 0; }
 .status-list { display: grid; gap: 12px; }
 .status-row {
   display: flex;
@@ -590,7 +552,3 @@ button.busy {
   background: rgba(54, 24, 24, 0.98);
   border-color: #7b3232;
 }
-
-.alert-run-card.is-target { border-color: #89d6ad; box-shadow: 0 0 0 2px rgba(94, 195, 138, 0.22), 0 12px 28px rgba(0,0,0,0.22); }
-
-html { scroll-padding-top: 16px; }

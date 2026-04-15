@@ -104,9 +104,9 @@
             <div class="section-head compact-head">
               <div>
                 <p class="eyebrow">Run now</p>
-                <h3>Latest banker preview</h3>
+                <h3>Latest preview</h3>
               </div>
-              <button class="ghost-btn" id="generateSampleBtn" type="button">Run banker scan now</button>
+              <button class="ghost-btn" id="generateSampleBtn" type="button">Run banker scan</button>
             </div>
             <div id="latestAlert" class="latest-alert empty">No banker alert yet.</div>
           </article>
@@ -118,12 +118,12 @@
           <div class="section-head">
             <div>
               <p class="eyebrow">Prompt vault</p>
-              <h2>Import prompts clearly</h2>
+              <h2>Add prompts in one go</h2>
             </div>
           </div>
           <form id="bulkForm" class="form-stack">
             <label>
-              <span>Paste one or more prompts</span>
+              <span>Paste prompts</span>
               <textarea name="text" rows="10" placeholder="Top Banker Legs&#10;Scan global yet-to-start fixtures and return the cleanest banker games section.&#10;&#10;---&#10;&#10;Under 4.5 Goals Bankers&#10;Find the safest under 4.5 goals football picks..." required></textarea>
             </label>
             <div class="field-grid three-up">
@@ -150,43 +150,13 @@
                 </select>
               </label>
             </div>
-            <div class="import-options">
-              <div class="import-options-head">
-                <p class="eyebrow">Import options</p>
-                <p class="subtle">These switches apply when you tap <strong>Save imported prompts</strong>.</p>
-              </div>
-              <div class="toggle-grid clearer-grid">
-                <label class="toggle-row">
-                  <input type="checkbox" name="priority" />
-                  <span>
-                    <strong>Mark all as priority</strong>
-                    <small>Use this only for your strongest prompts.</small>
-                  </span>
-                </label>
-                <label class="toggle-row">
-                  <input type="checkbox" name="bankerFocus" checked />
-                  <span>
-                    <strong>Mark all as banker alerts</strong>
-                    <small>This tells the app these prompts should create banker notifications.</small>
-                  </span>
-                </label>
-                <label class="toggle-row">
-                  <input type="checkbox" name="autoSchedule" checked />
-                  <span>
-                    <strong>Create a schedule for all imported prompts</strong>
-                    <small>Uses the time and days chosen above.</small>
-                  </span>
-                </label>
-                <label class="toggle-row">
-                  <input type="checkbox" name="notify" checked />
-                  <span>
-                    <strong>Send a notification when they run</strong>
-                    <small>Needed if you want phone alerts from these prompts.</small>
-                  </span>
-                </label>
-              </div>
+            <div class="toggle-grid">
+              <label class="toggle-chip"><input type="checkbox" name="priority" /> Priority all</label>
+              <label class="toggle-chip"><input type="checkbox" name="bankerFocus" checked /> Banker alert all</label>
+              <label class="toggle-chip"><input type="checkbox" name="autoSchedule" checked /> Add schedule</label>
+              <label class="toggle-chip"><input type="checkbox" name="notify" checked /> Send notifications</label>
             </div>
-            <button class="primary-btn" type="submit">Save imported prompts</button>
+            <button class="primary-btn" type="submit">Import to saved prompts</button>
           </form>
         </section>
 

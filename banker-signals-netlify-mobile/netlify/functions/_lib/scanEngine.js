@@ -3,10 +3,11 @@ import { APP_TIMEZONE, localNow } from './utils.js';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const SPORTS_API_BASE_URL = process.env.SPORTS_API_BASE_URL || 'https://api.the-odds-api.com';
-const ODDS_REGION = process.env.ODDS_REGION || 'au';
+const ODDS_REGION = process.env.ODDS_REGION || 'au,uk,eu';
 const ODDS_FORMAT = process.env.ODDS_FORMAT || 'decimal';
 const ODDS_MARKETS = process.env.ODDS_MARKETS || 'h2h,totals';
-const MAX_FIXTURES_FOR_AI = Number(process.env.MAX_FIXTURES_FOR_AI || 120);
+const MAX_FIXTURES_FOR_AI = Number(process.env.MAX_FIXTURES_FOR_AI || 160);
+const MAX_SCAN_HOURS = Number(process.env.MAX_SCAN_HOURS || 24);
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4.1';
 
 function requireEnv(name) {
@@ -31,9 +32,9 @@ function hoursFromNow(iso) {
   return (new Date(iso).getTime() - Date.now()) / 3600000;
 }
 
-function isWithinNext12Hours(iso) {
+function isWithinNextScanWindow(iso) {
   const hours = hoursFromNow(iso);
-  return hours > 0 && hours <= 12;
+  return hours > 0 && hours <= MAX_SCAN_HOURS;
 }
 
 async function getActiveSoccerSportKeys() {
@@ -120,23 +121,47 @@ async function getUpcomingFixtures() {
   const sportKeys = await getActiveSoccerSportKeys();
   const results = await Promise.allSettled(sportKeys.map(fetchOddsForSport));
   const events = [];
+  const failedSports = [];
 
-  for (const result of results) {
+  for (let i = 0; i < results.length; i += 1) {
+    const result = results[i];
     if (result.status === 'fulfilled' && Array.isArray(result.value)) {
       events.push(...result.value);
+    } else if (result.status === 'rejected') {
+      failedSports.push(sportKeys[i]);
     }
   }
 
-  const unique = new Map();
+  const rawEventsCount = events.length;
+  const eligible = [];
+  const uniqueIds = new Set();
+
   for (const event of events) {
     if (!event?.id || !event?.commence_time) continue;
-    if (!isWithinNext12Hours(event.commence_time)) continue;
-    if (!unique.has(event.id)) unique.set(event.id, normalizeEvent(event));
+    if (uniqueIds.has(event.id)) continue;
+    uniqueIds.add(event.id);
+    if (!isWithinNextScanWindow(event.commence_time)) continue;
+    eligible.push(normalizeEvent(event));
   }
 
-  return [...unique.values()]
+  const fixtures = eligible
     .sort((a, b) => new Date(a.kickoffUtc) - new Date(b.kickoffUtc))
     .slice(0, MAX_FIXTURES_FOR_AI);
+
+  return {
+    fixtures,
+    debug: {
+      requestedSportKeys: sportKeys.length,
+      failedSportKeys: failedSports.length,
+      failedSports,
+      rawEventsCount,
+      eligibleEventsCount: eligible.length,
+      returnedFixturesCount: fixtures.length,
+      scanWindowHours: MAX_SCAN_HOURS,
+      regions: ODDS_REGION,
+      markets: ODDS_MARKETS,
+    },
+  };
 }
 
 function buildUserMessage(promptName, promptBody, fixtures) {
@@ -148,12 +173,19 @@ function buildUserMessage(promptName, promptBody, fixtures) {
     '- Use ONLY the fixtures in the JSON below.',
     '- Use ONLY the user prompt and the raw fixture/odds data below.',
     '- Do NOT use outside prediction sites, tipsters, or invented team news.',
-    '- Focus on yet-to-start matches in the next 12 hours only.',
+    `- Focus on yet-to-start matches in the next ${MAX_SCAN_HOURS} hours only.`,
     '- Return the banker games first. Keep it concise and practical.',
     '',
     'Fixtures JSON:',
     JSON.stringify(fixtures, null, 2),
   ].join('\n');
+}
+
+function failedInfo(debug) {
+  if (!debug.failedSportKeys) return '';
+  if (debug.failedSportKeys === 0) return '';
+  const preview = (debug.failedSports || []).slice(0, 5).join(', ');
+  return `Some sport feeds failed to load (${debug.failedSportKeys}/${debug.requestedSportKeys})${preview ? `: ${preview}` : ''}.`;
 }
 
 function schema() {
@@ -229,23 +261,32 @@ export async function buildScanOutput({ promptName, promptBody, settings = {} })
     shots_on_target: { upper: '11+', lower: '7+', recommended: '8+' },
   };
 
-  const fixtures = await getUpcomingFixtures();
+  const { fixtures, debug } = await getUpcomingFixtures();
   if (!fixtures.length) {
+    const explanation = [
+      `No eligible yet-to-start football fixtures were found in the next ${MAX_SCAN_HOURS} hours.`,
+      `The raw fixture feed returned ${debug.rawEventsCount} football events before filtering.`,
+      `Regions used: ${debug.regions}. Markets used: ${debug.markets}.`,
+      failedInfo(debug),
+    ].filter(Boolean);
+
     return {
       title: '✅ Banker scan completed',
       createdAt: localNow().toISO(),
       source: 'odds-api-openai',
       promptName,
       promptBody,
-      banker: ['No eligible yet-to-start football fixtures were found in the next 12 hours.'],
+      promptRan: false,
+      banker: explanation,
       setA: [],
       setB: [],
       passList: [],
-      summary: 'No qualifying fixtures found in the next 12 hours.',
+      summary: `No qualifying fixtures survived the next-${MAX_SCAN_HOURS}-hours football filter.`,
       bands,
       notificationTitle: '✅ Banker scan completed',
-      notificationBody: 'No eligible fixtures found in the next 12 hours.',
+      notificationBody: `No eligible football fixtures found in the next ${MAX_SCAN_HOURS} hours.`,
       fixturesChecked: 0,
+      filterDebug: debug,
     };
   }
 
@@ -256,6 +297,7 @@ export async function buildScanOutput({ promptName, promptBody, settings = {} })
     source: 'odds-api-openai',
     promptName,
     promptBody,
+    promptRan: true,
     banker: ai.banker,
     setA: ai.setA,
     setB: ai.setB,
@@ -264,6 +306,7 @@ export async function buildScanOutput({ promptName, promptBody, settings = {} })
     bands,
     fixturesChecked: fixtures.length,
     fixturesPreview: fixtures.slice(0, 10),
+    filterDebug: debug,
     notificationTitle: ai.notificationTitle,
     notificationBody: ai.notificationBody,
   };
